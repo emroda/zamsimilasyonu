@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zam Simülasyonu | by emreodabasioglu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0a0a0a;
+            --game-bg: #141414;
+            --border-color: #333;
+            --neon-blue: #00f3ff;
+            --neon-red: #ff003c;
+            --neon-green: #05ffa1;
+            --text-main: #e0e0e0;
+            --ad-bg: #1a1a1a;
+        }
+
+        /* KOPYALAMA ENGELLEME (CSS) */
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden;
+            
+            /* Metin seçimini engelle */
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
+        }
+
+        /* --- REKLAM ALANLARI --- */
+        .ad-space {
+            width: 160px;
+            height: 100vh;
+            background: var(--ad-bg);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #444;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .ad-space:hover { background: #222; color: #666; }
+        .ad-placeholder { border: 2px dashed #444; padding: 20px; border-radius: 10px; }
+
+        /* --- OYUN KONTEYNERİ --- */
+        .game-wrapper {
+            flex-grow: 1;
+            max-width: 1000px;
+            height: 90vh;
+            background: var(--game-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border-radius: 4px;
+        }
+
+        /* İMZA (emreodabasioglu) */
+        .signature {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #444;
+            letter-spacing: 1px;
+            z-index: 50;
+            opacity: 0.5;
+            pointer-events: none;
+            font-family: monospace;
+        }
+        .signature span { color: var(--neon-blue); }
+
+        /* ÜST: PATRON ODASI */
+        .boss-room {
+            flex: 6;
+            position: relative;
+            background: radial-gradient(circle at 50% 80%, #2c3e50 0%, #000 100%);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            border-bottom: 4px solid var(--neon-blue);
+        }
+
+        .window-view {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(90deg, transparent 0, transparent 40px, rgba(0,0,0,0.8) 40px, rgba(0,0,0,0.8) 42px);
+            z-index: 1;
+            opacity: 0.3;
+        }
+
+        .boss-silhouette {
+            z-index: 5;
+            width: 300px;
+            height: 400px;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.1)); 
+        }
+
+        .boss-eyes {
+            font-size: 80px;
+            opacity: 0.8;
+            animation: blink 4s infinite;
+        }
+
+        /* ALT: KONTROL PANELİ */
+        .control-panel {
+            flex: 4;
+            background: #0f0f0f;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
+
+        .stats-monitor {
+            border: 1px solid var(--border-color);
+            background: #000;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            color: var(--neon-green);
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+        
+        .stat-line { margin-bottom: 15px; }
+        .stat-label { font-size: 0.8rem; display: block; margin-bottom: 5px; opacity: 0.7; }
+        .bar-container { width: 100%; height: 8px; background: #222; }
+        .bar-fill { height: 100%; width: 50%; transition: width 0.5s ease; }
+        
+        #bpm-display { font-size: 2rem; color: var(--neon-red); text-align: center; margin-top: 10px; animation: pulse 1s infinite; }
+
+        .dialogue-interface {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .dialogue-box {
+            background: rgba(255,255,255,0.05);
+            border-left: 4px solid var(--neon-blue);
+            padding: 15px;
+            min-height: 80px;
+            font-size: 1.2rem;
+            line-height: 1.4;
+            position: relative;
+        }
+        
+        .speaker-name { font-size: 0.8rem; color: var(--neon-blue); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold; }
+
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 180px;
+        }
+
+        .choice-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #aaa;
+            padding: 12px 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .choice-btn:hover { border-color: var(--neon-blue); color: #fff; background: rgba(0, 243, 255, 0.05); padding-left: 25px; }
+        .choice-btn.risk { border-color: var(--neon-red); }
+        .choice-btn.risk:hover { background: rgba(255, 0, 60, 0.1); }
+
+        @keyframes blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+        @keyframes pulse { 0% { opacity: 0.5; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0.5; transform: scale(0.95); } }
+        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 25% { transform: translate(-3px, 0px) rotate(1deg); } 75% { transform: translate(3px, 0px) rotate(-1deg); } 100% { transform: translate(0,0); } }
+        
+        .screen-shake { animation: shake 0.3s; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .hidden { display: none; }
+        .typewriter::after { content: '|'; animation: blink 1s infinite; }
+
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div class="ad-space">
+        <div class="ad-placeholder">REKLAM<br>SOL<br>(160x600)</div>
+    </div>
+
+    <div class="game-wrapper" id="game-screen">
+        
+        <div class="signature">designed by <span>emreodabasioglu</span></div>
+
+        <div id="end-overlay" class="overlay hidden">
+            <h1 id="end-title" style="font-size: 3rem; margin: 0; color: var(--neon-blue);">SONUÇ</h1>
+            <p id="end-desc" style="max-width: 600px; text-align: center; font-size: 1.2rem; color: #ccc;">...</p>
+            <button onclick="startGame()" style="margin-top: 30px; padding: 10px 40px; background: var(--neon-blue); border: none; cursor: pointer; font-weight: bold; font-size: 1.2rem;">YENİDEN BAŞLA</button>
+        </div>
+
+        <div class="boss-room">
+            <div class="window-view"></div>
+            <div class="boss-silhouette">
+                <div class="boss-eyes" id="boss-eyes">👀</div>
+            </div>
+            <div style="width: 100%; height: 50px; background: #000; z-index: 10; border-top: 1px solid #333; display: flex; justify-content: center; padding-top: 10px;">
+                <div style="background: #222; color: #fff; padding: 5px 20px; height: 25px; border-radius: 2px; font-size: 0.8rem; letter-spacing: 2px;">BAY PATRON</div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="stats-monitor">
+                <div class="stat-line">
+                    <span class="stat-label">PATRONUN SABRI</span>
+                    <div class="bar-container"><div class="bar-fill" id="patience-bar" style="background: var(--neon-blue);"></div></div>
+                </div>
+                <div class="stat-line">
+                    <span class="stat-label">STRES SEVİYESİ</span>
+                    <div class="bar-container"><div class="bar-fill" id="stress-bar" style="background: var(--neon-red);"></div></div>
+                </div>
+                <hr style="border-color: #333;">
+                <div style="text-align: center;">
+                    <span class="stat-label">NABIZ (BPM)</span>
+                    <div id="bpm-display">80</div>
+                </div>
+            </div>
+
+            <div class="dialogue-interface">
+                <div class="dialogue-box">
+                    <div class="speaker-name" id="speaker-name">SİSTEM</div>
+                    <span id="dialogue-text" class="typewriter">Yükleniyor...</span>
+                </div>
+                <div class="choices-container" id="choices-area">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ad-space">
+        <div class="ad-placeholder">REKLAM<br>SAĞ<br>(160x600)</div>
+    </div>
+
+<script>
+    // --- GÜVENLİK ÖNLEMLERİ (Kopyalama ve İncele Engelleme) ---
+    document.addEventListener('keydown', function(e) {
+        // F12
+        if(e.keyCode == 123) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+        if(e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+U (Kaynak Kodu)
+        if(e.ctrlKey && e.keyCode == 85) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    // -------------------------------------------------------------
+
+    let state = { patience: 100, stress: 10, scene: 'intro' };
+
+    const ui = {
+        screen: document.getElementById('game-screen'),
+        text: document.getElementById('dialogue-text'),
+        speaker: document.getElementById('speaker-name'),
+        choices: document.getElementById('choices-area'),
+        patienceBar: document.getElementById('patience-bar'),
+        stressBar: document.getElementById('stress-bar'),
+        bpm: document.getElementById('bpm-display'),
+        eyes: document.getElementById('boss-eyes'),
+        overlay: document.getElementById('end-overlay'),
+        endTitle: document.getElementById('end-title'),
+        endDesc: document.getElementById('end-desc')
+    };
+
+    const scenarios = {
+        intro: {
+            speaker: "İÇ SES",
+            text: "Bay Patron'un odasının önündesin. İçeriden telefonla bağıran bir ses geliyor. Kira günü yaklaşıyor. Nabzın yükseliyor.",
+            eyes: "🚪", bpm: 90,
+            choices: [
+                { text: "Derin bir nefes al ve kapıyı çal.", next: "waiting" },
+                { text: "Kapıyı çalmadan dal içeri. (Cesur)", next: "barge_in", risk: true },
+                { text: "Kapının aralığından dinle.", next: "eavesdrop", risk: true }
+            ]
+        },
+        eavesdrop: {
+            speaker: "BAY PATRON (TELEFON)",
+            text: "...Evet, evet! Maliyetleri kısmamız lazım. Personel azaltın, gerekirse tuvalet kağıdını bile sayın! Hahaha! Kapat, biri kapıda.",
+            eyes: "👂", bpm: 110, stress: +20,
+            choices: [
+                { text: "Duymamış gibi yapıp kapıyı çal.", next: "waiting" },
+                { text: "Bu ne biçim konuşma! (Sinirle gir)", next: "angry_start", risk: true }
+            ]
+        },
+        waiting: {
+            speaker: "SİSTEM",
+            text: "Kapıyı çaldın... Ses yok. Bekliyorsun. 1 dakika geçti. İçeriden klavye sesleri geliyor. Seni bekleterek strese sokmaya çalışıyor.",
+            eyes: "⌛", bpm: 100, stress: +10,
+            choices: [
+                { text: "Tekrar çal.", next: "enter_room" },
+                { text: "Beklemeye devam et. (Sabırlı)", next: "waiting_long" }
+            ]
+        },
+        waiting_long: {
+            speaker: "BAY PATRON",
+            text: "(Kapı aniden açılır) Ne dikiliyorsun orada mumya gibi? Gir içeri! Vaktim yok.",
+            eyes: "😠", bpm: 120, patience: -10,
+            choices: [
+                { text: "Kusura bakmayın efendim, rahatsız etmek istemedim.", next: "passive_start" },
+                { text: "Randevumuz vardı Bay Patron.", next: "assertive_start" }
+            ]
+        },
+        passive_start: {
+            speaker: "BAY PATRON",
+            text: "Tamam tamam, sızlanma. Geç otur şuraya. Sandalye kırık dikkat et. Ee, ne anlatacaksın?",
+            eyes: "🙄",
+            choices: [
+                { text: "Konu maaşım efendim.", next: "topic_money" },
+                { text: "Şirketle ilgili endişelerim var.", next: "topic_company" }
+            ]
+        },
+        assertive_start: {
+            speaker: "BAY PATRON",
+            text: "Randevu mu? Haa, doğru. Sekreterim söylemişti. Cesaretini sevdim, ama vaktim nakittir. Hızlı ol.",
+            eyes: "🤨", stress: -5,
+            choices: [
+                { text: "Doğrudan konuya gireyim: Zam istiyorum.", next: "topic_money" },
+                { text: "Geleceğim hakkında konuşmak istiyorum.", next: "topic_company" }
+            ]
+        },
+        enter_room: {
+            speaker: "BAY PATRON",
+            text: "Gel. Oturma, ayakta konuşacağız. Söyle bakalım, bu yoğunlukta beni neden meşgul ediyorsun?",
+            eyes: "🧐", bpm: 110,
+            choices: [
+                { text: "Asgari ücret zammı ve performansım hakkında konuşacaktım.", next: "topic_money" },
+                { text: "Şirketin geleceği hakkında endişelerim var...", next: "topic_company" }
+            ]
+        },
+        topic_company: {
+            speaker: "BAY PATRON",
+            text: "Şirketin geleceği parlak, sen kendi geleceğini düşün. Eğer zam isteyeceksen lafı dolandırma.",
+            eyes: "🕶️",
+            choices: [
+                { text: "Evet, zam istiyorum.", next: "topic_money" },
+                { text: "Hayır, sadece durum değerlendirmesi... (Korkak)", next: "coward_loop" }
+            ]
+        },
+        coward_loop: {
+            speaker: "BAY PATRON",
+            text: "Durum değerlendirmesini ben yaparım. Çıkabilirsin, meşgulüm.",
+            choices: [{text: "Peki...", next: "slave_ending"}]
+        },
+        topic_money: {
+            speaker: "BAY PATRON",
+            text: "Para... Yine para. Daha geçen yıl zam yapmadık mı? Şirket zor durumda. Elektrik faturası ne kadar geldi haberin var mı?",
+            eyes: "😒", bpm: 100,
+            choices: [
+                { text: "Geçen yılki zam enflasyonun yarısıydı efendim.", next: "logic_battle_1" },
+                { text: "Sizin arabanızın aylık taksiti kadar zam istiyorum sadece.", next: "personal_attack", risk: true },
+                { text: "Benim kiram %150 arttı, geçinemiyorum.", next: "sympathy_fail" }
+            ]
+        },
+        angry_start: {
+             speaker: "BAY PATRON",
+             text: "Sen kapı dinlemeyi nerden öğrendin? Derhal çık odamdan! Terbiyesiz!",
+             eyes: "🤬", stress: +40, patience: -50, effect: "shake",
+             choices: [
+                 { text: "Özür dilerim...", next: "waiting" },
+                 { text: "Çıkmıyorum! Hakkımı verin!", next: "fired_scene" }
+             ]
+        },
+        barge_in: {
+            speaker: "BAY PATRON",
+            text: "HOOP! Burası ahır mı? Çık dışarı tekrar gir! Yoksa güvenliği çağırırım!",
+            eyes: "🤬", bpm: 140, stress: +30, patience: -30, effect: "shake",
+            choices: [
+                { text: "Çıkıp tekrar gir (Utanç verici)", next: "waiting" },
+                { text: "Dinlemek zorundasınız!", next: "fired_immediate", risk: true }
+            ]
+        },
+        logic_battle_1: {
+            speaker: "BAY PATRON",
+            text: "Enflasyon devletin sorunu, benim değil. Ben performansa bakarım. Geçen ayki raporda bir virgül hatası vardı. Bu mu performans?",
+            eyes: "📉", bpm: 115, stress: +10,
+            choices: [
+                { text: "O hatayı ben değil, sistem yaptı. Ayrıca satışları %20 artırdım.", next: "logic_battle_2" },
+                { text: "Özür dilerim, daha dikkatli olurum... (Alttan al)", next: "slave_ending" }
+            ]
+        },
+        logic_battle_2: {
+            speaker: "BAY PATRON",
+            text: "Satışlar arttı ama kârlılık düştü. Bak, sana bir teklif yapayım. Maaşını aynı tutalım, ama ünvanını 'Senior Specialist' yapalım? Kartvizitin havalı olur.",
+            eyes: "😏", bpm: 105,
+            choices: [
+                { text: "Ünvan kiramı ödemiyor Bay Patron. Nakit istiyorum.", next: "hard_negotiation" },
+                { text: "Peki, yanında yemek kartı bakiyesini artırır mısınız?", next: "compromise_try" }
+            ]
+        },
+        compromise_try: {
+            speaker: "BAY PATRON",
+            text: "Yemek kartı mı? Tamam, günlük 50 TL artış yaparım. Ama maaşına zam yok. Anlaştık mı?",
+            choices: [
+                 { text: "Hiç yoktan iyidir. (Kabul Et)", next: "bad_deal_ending" },
+                 { text: "Bu yetmez, maaş zammı şart.", next: "hard_negotiation" }
+            ]
+        },
+        sympathy_fail: {
+            speaker: "BAY PATRON",
+            text: "Herkesin derdi kendine. Ben burası hayır kurumu mu? Bana para kazandır, para vereyim. Kirandan bana ne?",
+            eyes: "😤", bpm: 130, patience: -10,
+            choices: [
+                { text: "Ben de o zaman emeğimi başka şirkete satarım.", next: "ultimatum_scene" },
+                { text: "Haklısınız... Çalışmaya devam edeceğim.", next: "slave_ending" }
+            ]
+        },
+        personal_attack: {
+            speaker: "BAY PATRON",
+            text: "Sen benim özel hayatımı mı takip ediyorsun? Haddini bil! Bu konuşma bitmiştir!",
+            eyes: "😡", bpm: 150, stress: +40, effect: "shake",
+            choices: [
+                { text: "Çok ileri gittim, özür dilerim.", next: "waiting" },
+                { text: "Bitmez! Hakkımı verin!", next: "fired_scene" }
+            ]
+        },
+        hard_negotiation: {
+            speaker: "BAY PATRON",
+            text: "(Masaya vurur) Çok inatçısın! Tamam, %30 zam. Ama Cumartesi günleri de geleceksin ve mesai ücreti yok. İşine gelirse.",
+            eyes: "👀", bpm: 140, stress: +20,
+            choices: [
+                { text: "Asla! Hafta sonu benim. %25 olsun ama haftasonu bende kalsın.", next: "smart_win" },
+                { text: "Tamam kabul ediyorum... (Çaresiz)", next: "bad_deal_ending" },
+                { text: "Ben istifa ediyorum. Bu şartlarda çalışamam.", next: "resign_ending" }
+            ]
+        },
+        ultimatum_scene: {
+            speaker: "BAY PATRON",
+            text: "Tehdit mi? Kapı orada. Senden bin tane var dışarıda. Git!",
+            eyes: "👉", bpm: 160, stress: +30,
+            choices: [
+                { text: "[BLÖF] Rakip firma X ile görüştüm, %50 fazla veriyorlar.", next: "bluff_check", risk: true },
+                { text: "Peki, gidiyorum!", next: "fired_scene" }
+            ]
+        },
+        bluff_check: { check: true },
+        
+        // SONLAR
+        fired_immediate: { end: true, title: "KOVULDUN", msg: "Daha odaya girmeden kovulmayı başardın. Rekor.", color: "red" },
+        fired_scene: { end: true, title: "KOVULDUN", msg: "Güvenlik eşliğinde binadan çıkarıldın. Tazminat davası açacaksın ama iş işten geçti.", color: "red" },
+        slave_ending: { end: true, title: "KÖLELİK DEVAM EDİYOR", msg: "Zam alamadın, sadece azar işittin. Masana döndün ve çalışmaya devam ettin.", color: "grey" },
+        bad_deal_ending: { end: true, title: "KAYBETTİN", msg: "Zam aldın ama artık haftada 6 gün çalışıyorsun. Hayatın bitti.", color: "orange" },
+        smart_win: { end: true, title: "MAKUL ZAFER", msg: "%25 Zammı kopardın ve hafta sonlarını kurtardın. Patron senden nefret ediyor ama saygı duyuyor.", color: "cyan" },
+        resign_ending: { end: true, title: "ÖZGÜRLÜK", msg: "İstifayı bastın. Cebinde para yok ama kafan rahat. Belki o reklamdaki işe başvurursun?", color: "white" },
+        legend_win: { end: true, title: "EFSANEVİ ZAFER", msg: "Blöfün tuttu! Seni kaybetmekten korktu. %45 Zam + Prim aldın.", color: "gold" },
+        bluff_fail: { end: true, title: "BLÖF PATLADI", msg: "'Yalan söylüyorsun' dedi ve seni kovdu. Keşke doğruyu söyleseydin.", color: "red" }
+    };
+
+    function startGame() {
+        state.patience = 100;
+        state.stress = 20;
+        ui.overlay.classList.add('hidden');
+        renderStats();
+        loadScene('intro');
+    }
+
+    function updateStats(pChange, sChange) {
+        state.patience = Math.min(100, Math.max(0, state.patience + (pChange || 0)));
+        state.stress = Math.min(100, Math.max(0, state.stress + (sChange || 0)));
+        renderStats();
+    }
+
+    function renderStats() {
+        ui.patienceBar.style.width = state.patience + "%";
+        ui.stressBar.style.width = state.stress + "%";
+        let bpm = 80 + (state.stress * 0.8);
+        ui.bpm.innerText = Math.floor(bpm);
+        ui.bpm.style.animationDuration = (60 / bpm) + "s";
+    }
+
+    function loadScene(key) {
+        if (!scenarios[key]) {
+            console.error("HATA: Senaryo bulunamadı ->", key);
+            return;
+        }
+
+        let scene = scenarios[key];
+        
+        if (scene.check) {
+            if (Math.random() > 0.5) loadScene('legend_win');
+            else loadScene('bluff_fail');
+            return;
+        }
+
+        if (scene.end) {
+            ui.endTitle.innerText = scene.title;
+            ui.endTitle.style.color = scene.color === 'gold' ? '#ffd700' : (scene.color === 'red' ? '#ff003c' : '#00f3ff');
+            ui.endDesc.innerText = scene.msg;
+            ui.overlay.classList.remove('hidden');
+            return;
+        }
+
+        updateStats(scene.patience, scene.stress);
+        
+        ui.speaker.innerText = scene.speaker || "SİSTEM";
+        ui.eyes.innerText = scene.eyes || "😶";
+        ui.text.innerText = "";
+        
+        if (scene.effect === 'shake') {
+            ui.screen.classList.add('screen-shake');
+            setTimeout(() => ui.screen.classList.remove('screen-shake'), 500);
+        }
+
+        let i = 0;
+        ui.choices.innerHTML = '';
+        function typeWriter() {
+            if (i < scene.text.length) {
+                ui.text.innerText += scene.text.charAt(i);
+                i++;
+                setTimeout(typeWriter, 20);
+            } else {
+                renderChoices(scene.choices);
+            }
+        }
+        typeWriter();
+    }
+
+    function renderChoices(choices) {
+        choices.forEach(c => {
+            let btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            if (c.risk) btn.classList.add('risk');
+            
+            let label = c.text;
+            if (c.risk) label += " [RİSKLİ]";
+            
+            btn.innerText = "➤ " + label;
+            btn.onclick = () => loadScene(c.next);
+            ui.choices.appendChild(btn);
+        });
+    }
+
+    startGame();
+</script>
+</body>
+</html>
